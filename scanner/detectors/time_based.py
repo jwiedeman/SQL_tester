@@ -16,10 +16,11 @@ def fetch(
     method: str = "get",
     data: dict | None = None,
     cookies: dict | None = None,
+    headers: dict | None = None,
 ):
     """Fetch a URL using the given method and measure response time."""
     start = time.time()
-    body = send_request(url, method=method, data=data, cookies=cookies)
+    body = send_request(url, method=method, data=data, cookies=cookies, headers=headers)
     elapsed = time.time() - start
     return body, elapsed
 
@@ -32,29 +33,37 @@ def test_parameter(
     method: str = "get",
     data: dict | None = None,
     cookies: dict | None = None,
+    headers: dict | None = None,
     location: str = "query",
 ):
     """Attempt time-based SQL injection on a parameter."""
     data = data or {}
     cookies = cookies or {}
+    headers = headers or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
     if location == "cookie":
         original = cookies.get(param, "")
         try:
-            _, baseline_time = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies)
+            _, baseline_time = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+        except Exception:
+            baseline_time = 0.0
+    elif location == "header":
+        original = headers.get(param, "")
+        try:
+            _, baseline_time = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
         except Exception:
             baseline_time = 0.0
     elif method.lower() == "get":
         original = query.get(param, [""])[0]
         try:
-            _, baseline_time = fetch(url, cookies=cookies)
+            _, baseline_time = fetch(url, cookies=cookies, headers=headers)
         except Exception:
             baseline_time = 0.0
     else:
         original = data.get(param, "")
         try:
-            _, baseline_time = fetch(url, method="post", data=data, cookies=cookies)
+            _, baseline_time = fetch(url, method="post", data=data, cookies=cookies, headers=headers)
         except Exception:
             baseline_time = 0.0
 
@@ -70,6 +79,21 @@ def test_parameter(
                     method=method,
                     data=data if method.lower() == "post" else None,
                     cookies=new_cookies,
+                    headers=headers,
+                )
+            except Exception:
+                elapsed = 0.0
+        elif location == "header":
+            new_headers = headers.copy()
+            new_headers[param] = original + payload
+            new_url = url
+            try:
+                _, elapsed = fetch(
+                    new_url,
+                    method=method,
+                    data=data if method.lower() == "post" else None,
+                    cookies=cookies,
+                    headers=new_headers,
                 )
             except Exception:
                 elapsed = 0.0
@@ -78,7 +102,7 @@ def test_parameter(
             new_query = urllib.parse.urlencode(query, doseq=True)
             new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                _, elapsed = fetch(new_url, cookies=cookies)
+                _, elapsed = fetch(new_url, cookies=cookies, headers=headers)
             except Exception:
                 elapsed = 0.0
         else:
@@ -86,7 +110,7 @@ def test_parameter(
             post_data[param] = original + payload
             new_url = url
             try:
-                _, elapsed = fetch(new_url, method="post", data=post_data, cookies=cookies)
+                _, elapsed = fetch(new_url, method="post", data=post_data, cookies=cookies, headers=headers)
             except Exception:
                 elapsed = 0.0
         vulnerable = (elapsed - baseline_time) > delay_threshold

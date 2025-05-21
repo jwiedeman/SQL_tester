@@ -32,29 +32,37 @@ def test_parameter(
     method: str = "get",
     data: dict | None = None,
     cookies: dict | None = None,
+    headers: dict | None = None,
     location: str = "query",
 ):
     """Attempt boolean-based SQL injection on a parameter."""
     data = data or {}
     cookies = cookies or {}
+    headers = headers or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
     if location == "cookie":
         original = cookies.get(param, "")
         try:
-            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies)
+            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+        except Exception as e:
+            baseline_body = str(e)
+    elif location == "header":
+        original = headers.get(param, "")
+        try:
+            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
         except Exception as e:
             baseline_body = str(e)
     elif method.lower() == "get":
         original = query.get(param, [''])[0]
         try:
-            baseline_body = fetch(url, cookies=cookies)
+            baseline_body = fetch(url, cookies=cookies, headers=headers)
         except Exception as e:
             baseline_body = str(e)
     else:
         original = data.get(param, "")
         try:
-            baseline_body = fetch(url, method="post", data=data, cookies=cookies)
+            baseline_body = fetch(url, method="post", data=data, cookies=cookies, headers=headers)
         except Exception as e:
             baseline_body = str(e)
     baseline_len = len(baseline_body)
@@ -66,14 +74,53 @@ def test_parameter(
             new_cookies[param] = original + p_true
             true_url = url
             try:
-                body_true = fetch(true_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
+                body_true = fetch(
+                    true_url,
+                    method=method,
+                    data=data if method.lower() == "post" else None,
+                    cookies=new_cookies,
+                    headers=headers,
+                )
             except Exception as e:
                 body_true = str(e)
 
             new_cookies[param] = original + p_false
             false_url = url
             try:
-                body_false = fetch(false_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
+                body_false = fetch(
+                    false_url,
+                    method=method,
+                    data=data if method.lower() == "post" else None,
+                    cookies=new_cookies,
+                    headers=headers,
+                )
+            except Exception as e:
+                body_false = str(e)
+        elif location == "header":
+            new_headers = headers.copy()
+            new_headers[param] = original + p_true
+            true_url = url
+            try:
+                body_true = fetch(
+                    true_url,
+                    method=method,
+                    data=data if method.lower() == "post" else None,
+                    cookies=cookies,
+                    headers=new_headers,
+                )
+            except Exception as e:
+                body_true = str(e)
+
+            new_headers[param] = original + p_false
+            false_url = url
+            try:
+                body_false = fetch(
+                    false_url,
+                    method=method,
+                    data=data if method.lower() == "post" else None,
+                    cookies=cookies,
+                    headers=new_headers,
+                )
             except Exception as e:
                 body_false = str(e)
         elif method.lower() == "get":
@@ -81,7 +128,7 @@ def test_parameter(
             new_query = urllib.parse.urlencode(query, doseq=True)
             true_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                body_true = fetch(true_url, cookies=cookies)
+                body_true = fetch(true_url, cookies=cookies, headers=headers)
             except Exception as e:
                 body_true = str(e)
 
@@ -89,7 +136,7 @@ def test_parameter(
             new_query = urllib.parse.urlencode(query, doseq=True)
             false_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                body_false = fetch(false_url, cookies=cookies)
+                body_false = fetch(false_url, cookies=cookies, headers=headers)
             except Exception as e:
                 body_false = str(e)
         else:
@@ -97,7 +144,7 @@ def test_parameter(
             post_true[param] = original + p_true
             true_url = url
             try:
-                body_true = fetch(true_url, method="post", data=post_true, cookies=cookies)
+                body_true = fetch(true_url, method="post", data=post_true, cookies=cookies, headers=headers)
             except Exception as e:
                 body_true = str(e)
 
@@ -105,7 +152,7 @@ def test_parameter(
             post_false[param] = original + p_false
             false_url = url
             try:
-                body_false = fetch(false_url, method="post", data=post_false, cookies=cookies)
+                body_false = fetch(false_url, method="post", data=post_false, cookies=cookies, headers=headers)
             except Exception as e:
                 body_false = str(e)
 

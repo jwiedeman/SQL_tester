@@ -219,3 +219,4 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Implement response diffing engine
 - Add POST form scanning support
 - Add cookie scanning support
+- Add header scanning support
