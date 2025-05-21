@@ -221,3 +221,4 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Add cookie scanning support
 - Add header scanning support
 - Add path parameter scanning support
+- Implement GraphQL-based detection module
