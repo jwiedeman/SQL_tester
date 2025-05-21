@@ -78,9 +78,14 @@ def crawl(start_url, limit=10):
         except Exception:
             continue
         links, forms = parser.parse(html)
+        abs_forms = []
+        for form in forms:
+            form_copy = form.copy()
+            form_copy["action"] = urljoin(url, form.get("action", ""))
+            abs_forms.append(form_copy)
         results[url] = {
             "links": links,
-            "forms": forms,
+            "forms": abs_forms,
         }
         for link in links:
             absolute = urljoin(url, link)

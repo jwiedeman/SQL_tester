@@ -1,6 +1,6 @@
 import uuid
 import urllib.parse
-import urllib.request
+from ..utils import send_request
 
 # Out-of-band SQL injection detection
 # This module triggers DNS/HTTP requests to a callback domain. The
@@ -13,30 +13,48 @@ PAYLOADS = [
 ]
 
 
-def test_parameter(url: str, param: str, value: str, callback_domain: str = "example.com"):
+def test_parameter(
+    url: str,
+    param: str,
+    value: str,
+    callback_domain: str = "example.com",
+    method: str = "get",
+    data: dict | None = None,
+):
     """Attempt OOB SQL injection on a parameter.
 
     Because verification requires an external listener, this function
     does not automatically confirm vulnerability. Instead it returns a
     token per payload that can be monitored externally.
     """
+    data = data or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    original = query.get(param, [''])[0]
+    if method.lower() == "get":
+        original = query.get(param, [''])[0]
+    else:
+        original = data.get(param, "")
 
     results = []
     for template in PAYLOADS:
         token = uuid.uuid4().hex
         payload = template.format(domain=callback_domain, token=token)
-        query[param] = original + payload
-        new_query = urllib.parse.urlencode(query, doseq=True)
-        new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
-        # Fire the request but ignore the response. Network issues are tolerated.
-        try:
-            with urllib.request.urlopen(new_url) as resp:
-                resp.read()
-        except Exception:
-            pass
+        if method.lower() == "get":
+            query[param] = original + payload
+            new_query = urllib.parse.urlencode(query, doseq=True)
+            new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+            try:
+                send_request(new_url)
+            except Exception:
+                pass
+        else:
+            post_data = data.copy()
+            post_data[param] = original + payload
+            new_url = url
+            try:
+                send_request(new_url, method="post", data=post_data)
+            except Exception:
+                pass
         results.append({
             'url': new_url,
             'param': param,
