@@ -204,9 +204,6 @@ All methods non-destructive; still, advise clients about potential logging and p
 
 
 ## Pending Tasks
-- None
-
-## Completed Tasks
 - Environment setup and project skeleton
 - Implement basic crawler to extract links and forms
 - Implement error-based detection module
@@ -222,3 +219,6 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Add header scanning support
 - Add path parameter scanning support
 - Implement GraphQL-based detection module
+
+## Completed Tasks
+- None
