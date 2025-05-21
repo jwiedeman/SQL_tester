@@ -2,17 +2,24 @@ import sys
 from urllib.parse import urlparse, parse_qs
 
 from .crawler import crawl
-from .detectors import error_based, union_based, boolean_based, time_based
+from .detectors import (
+    error_based,
+    union_based,
+    boolean_based,
+    time_based,
+    oob_based,
+)
 from .report import CSVReporter
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python -m scanner.runner <url> [limit]")
+        print("Usage: python -m scanner.runner <url> [limit] [callback_domain]")
         sys.exit(1)
 
     start_url = sys.argv[1]
     limit = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    callback_domain = sys.argv[3] if len(sys.argv) > 3 else "example.com"
 
     results = crawl(start_url, limit=limit)
     reporter = CSVReporter('report.csv')
@@ -54,6 +61,17 @@ def main():
                     param=t['param'],
                     payload=t['payload'],
                     method='time-based',
+                    vulnerable=t['vulnerable'],
+                )
+            o_tests = oob_based.test_parameter(
+                url, param, query[param][0], callback_domain=callback_domain
+            )
+            for t in o_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='oob-based',
                     vulnerable=t['vulnerable'],
                 )
     reporter.write()
