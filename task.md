@@ -215,3 +215,4 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Create CSV reporting functionality
 - Provide command line interface for running scans
 - Implement time-based detection module
+- Implement out-of-band detection module
