@@ -8,6 +8,7 @@ from .detectors import (
     boolean_based,
     time_based,
     oob_based,
+    graphql_based,
 )
 from .report import CSVReporter
 
@@ -31,6 +32,21 @@ def main():
         }
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
+        if 'graphql' in parsed.path.lower():
+            g_tests = graphql_based.test_endpoint(
+                url,
+                method='post',
+                cookies=cookies,
+                headers=headers,
+            )
+            for t in g_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='graphql-based',
+                    vulnerable=t['vulnerable'],
+                )
         path_segments = [p for p in parsed.path.split('/') if p]
         for idx, segment in enumerate(path_segments):
             param_name = f"path_{idx}"
@@ -212,6 +228,22 @@ def main():
             action_url = form.get('action') or url
             method = form.get('method', 'get').lower()
             form_data = {i['name']: '1' for i in form.get('inputs', []) if i.get('name')}
+            if 'graphql' in action_url.lower():
+                g_tests = graphql_based.test_endpoint(
+                    action_url,
+                    method=method,
+                    cookies=cookies,
+                    headers=headers,
+                )
+                for t in g_tests:
+                    reporter.add_result(
+                        url=t['url'],
+                        param=t['param'],
+                        payload=t['payload'],
+                        method='graphql-based',
+                        vulnerable=t['vulnerable'],
+                    )
+                continue
             for param in list(form_data.keys()):
                 tests = error_based.test_parameter(
                     action_url,
