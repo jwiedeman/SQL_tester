@@ -2,6 +2,8 @@ import re
 import urllib.parse
 import urllib.request
 
+from .. import diff
+
 ERROR_PATTERNS = [
     re.compile(r"you have an error in your sql syntax", re.I),
     re.compile(r"warning: mysql", re.I),
@@ -31,12 +33,11 @@ def test_parameter(url: str, param: str, value: str):
     query = urllib.parse.parse_qs(parsed.query)
     original = query.get(param, [''])[0]
 
-    # Get baseline response length for comparison
+    # Get baseline response body for comparison
     try:
         baseline_body = fetch(url)
     except Exception as e:
         baseline_body = str(e)
-    baseline_len = len(baseline_body)
 
     results = []
     for payload in PAYLOADS:
@@ -48,8 +49,8 @@ def test_parameter(url: str, param: str, value: str):
         except Exception as e:
             body = str(e)
         error = any(p.search(body) for p in ERROR_PATTERNS)
-        length_diff = len(body) != baseline_len
-        vulnerable = length_diff and not error
+        diff_found = diff.is_significant_diff(baseline_body, body)
+        vulnerable = diff_found and not error
         results.append({
             'url': new_url,
             'param': param,
