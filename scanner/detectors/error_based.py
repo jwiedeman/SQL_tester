@@ -22,6 +22,7 @@ def test_parameter(
     cookies=None,
     headers=None,
     location="query",
+    path_index=None,
 ):
     """Attempt error-based SQL injection on a parameter."""
     data = data or {}
@@ -33,6 +34,9 @@ def test_parameter(
         original = cookies.get(param, "")
     elif location == "header":
         original = headers.get(param, "")
+    elif location == "path" and path_index is not None:
+        segments = parsed.path.split("/")
+        original = segments[path_index]
     elif method.lower() == "get":
         original = query.get(param, [""])[0]
     else:
@@ -59,6 +63,21 @@ def test_parameter(
                     data=data if method.lower() == "post" else None,
                     cookies=cookies,
                     headers=new_headers,
+                )
+            except Exception as e:
+                body = str(e)
+        elif location == "path" and path_index is not None:
+            segments = parsed.path.split("/")
+            segments[path_index] = original + payload
+            new_path = "/".join(segments)
+            new_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+            try:
+                body = send_request(
+                    new_url,
+                    method=method,
+                    data=data if method.lower() == "post" else None,
+                    cookies=cookies,
+                    headers=headers,
                 )
             except Exception as e:
                 body = str(e)

@@ -31,6 +31,100 @@ def main():
         }
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
+        path_segments = [p for p in parsed.path.split('/') if p]
+        for idx, segment in enumerate(path_segments):
+            param_name = f"path_{idx}"
+            tests = error_based.test_parameter(
+                url,
+                param_name,
+                segment,
+                method="get",
+                cookies=cookies,
+                headers=headers,
+                location="path",
+                path_index=idx + (1 if parsed.path.startswith('/') else 0),
+            )
+            for t in tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='error-based',
+                    vulnerable=t['vulnerable'],
+                )
+            u_tests = union_based.test_parameter(
+                url,
+                param_name,
+                segment,
+                method="get",
+                cookies=cookies,
+                headers=headers,
+                location="path",
+                path_index=idx + (1 if parsed.path.startswith('/') else 0),
+            )
+            for t in u_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='union-based',
+                    vulnerable=t['vulnerable'],
+                )
+            b_tests = boolean_based.test_parameter(
+                url,
+                param_name,
+                segment,
+                method="get",
+                cookies=cookies,
+                headers=headers,
+                location="path",
+                path_index=idx + (1 if parsed.path.startswith('/') else 0),
+            )
+            for t in b_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='boolean-based',
+                    vulnerable=t['vulnerable'],
+                )
+            t_tests = time_based.test_parameter(
+                url,
+                param_name,
+                segment,
+                method="get",
+                cookies=cookies,
+                headers=headers,
+                location="path",
+                path_index=idx + (1 if parsed.path.startswith('/') else 0),
+            )
+            for t in t_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='time-based',
+                    vulnerable=t['vulnerable'],
+                )
+            o_tests = oob_based.test_parameter(
+                url,
+                param_name,
+                segment,
+                callback_domain=callback_domain,
+                method="get",
+                cookies=cookies,
+                headers=headers,
+                location="path",
+                path_index=idx + (1 if parsed.path.startswith('/') else 0),
+            )
+            for t in o_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='oob-based',
+                    vulnerable=t['vulnerable'],
+                )
         for param in query.keys():
             tests = error_based.test_parameter(
                 url,

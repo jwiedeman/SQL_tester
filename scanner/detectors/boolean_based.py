@@ -34,6 +34,7 @@ def test_parameter(
     cookies: dict | None = None,
     headers: dict | None = None,
     location: str = "query",
+    path_index: int | None = None,
 ):
     """Attempt boolean-based SQL injection on a parameter."""
     data = data or {}
@@ -49,6 +50,13 @@ def test_parameter(
             baseline_body = str(e)
     elif location == "header":
         original = headers.get(param, "")
+        try:
+            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+        except Exception as e:
+            baseline_body = str(e)
+    elif location == "path" and path_index is not None:
+        segments = parsed.path.split("/")
+        original = segments[path_index]
         try:
             baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
         except Exception as e:
@@ -121,6 +129,23 @@ def test_parameter(
                     cookies=cookies,
                     headers=new_headers,
                 )
+            except Exception as e:
+                body_false = str(e)
+        elif location == "path" and path_index is not None:
+            segments = parsed.path.split("/")
+            segments[path_index] = original + p_true
+            new_path = "/".join(segments)
+            true_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+            try:
+                body_true = fetch(true_url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+            except Exception as e:
+                body_true = str(e)
+
+            segments[path_index] = original + p_false
+            new_path = "/".join(segments)
+            false_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+            try:
+                body_false = fetch(false_url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
             except Exception as e:
                 body_false = str(e)
         elif method.lower() == "get":

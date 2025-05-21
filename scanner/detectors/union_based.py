@@ -41,6 +41,7 @@ def test_parameter(
     cookies: dict | None = None,
     headers: dict | None = None,
     location: str = "query",
+    path_index: int | None = None,
 ):
     """Attempt UNION-based SQL injection on a single parameter."""
     data = data or {}
@@ -62,6 +63,19 @@ def test_parameter(
             baseline_body = str(e)
     elif location == "header":
         original = headers.get(param, "")
+        try:
+            baseline_body = fetch(
+                url,
+                method=method,
+                data=data if method.lower() == "post" else None,
+                cookies=cookies,
+                headers=headers,
+            )
+        except Exception as e:
+            baseline_body = str(e)
+    elif location == "path" and path_index is not None:
+        segments = parsed.path.split("/")
+        original = segments[path_index]
         try:
             baseline_body = fetch(
                 url,
@@ -112,6 +126,21 @@ def test_parameter(
                     data=data if method.lower() == "post" else None,
                     cookies=cookies,
                     headers=new_headers,
+                )
+            except Exception as e:
+                body = str(e)
+        elif location == "path" and path_index is not None:
+            segments = parsed.path.split("/")
+            segments[path_index] = original + payload
+            new_path = "/".join(segments)
+            new_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+            try:
+                body = fetch(
+                    new_url,
+                    method=method,
+                    data=data if method.lower() == "post" else None,
+                    cookies=cookies,
+                    headers=headers,
                 )
             except Exception as e:
                 body = str(e)

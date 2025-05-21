@@ -23,6 +23,7 @@ def test_parameter(
     cookies: dict | None = None,
     headers: dict | None = None,
     location: str = "query",
+    path_index: int | None = None,
 ):
     """Attempt OOB SQL injection on a parameter.
 
@@ -39,6 +40,9 @@ def test_parameter(
         original = cookies.get(param, "")
     elif location == "header":
         original = headers.get(param, "")
+    elif location == "path" and path_index is not None:
+        segments = parsed.path.split("/")
+        original = segments[path_index]
     elif method.lower() == "get":
         original = query.get(param, [''])[0]
     else:
@@ -62,6 +66,15 @@ def test_parameter(
             new_url = url
             try:
                 send_request(new_url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=new_headers)
+            except Exception:
+                pass
+        elif location == "path" and path_index is not None:
+            segments = parsed.path.split("/")
+            segments[path_index] = original + payload
+            new_path = "/".join(segments)
+            new_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+            try:
+                send_request(new_url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
             except Exception:
                 pass
         elif method.lower() == "get":
