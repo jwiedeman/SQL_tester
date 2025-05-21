@@ -2,7 +2,7 @@ import sys
 from urllib.parse import urlparse, parse_qs
 
 from .crawler import crawl
-from .detectors import error_based, union_based
+from .detectors import error_based, union_based, boolean_based
 from .report import CSVReporter
 
 
@@ -36,6 +36,15 @@ def main():
                     param=t['param'],
                     payload=t['payload'],
                     method='union-based',
+                    vulnerable=t['vulnerable'],
+                )
+            b_tests = boolean_based.test_parameter(url, param, query[param][0])
+            for t in b_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='boolean-based',
                     vulnerable=t['vulnerable'],
                 )
     reporter.write()
