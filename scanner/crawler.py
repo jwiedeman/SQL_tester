@@ -1,4 +1,5 @@
 import urllib.request
+import http.cookiejar
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 from collections import deque
@@ -57,9 +58,15 @@ class FormParser(HTMLParser):
         return self.links, self.forms
 
 
+cookie_jar = http.cookiejar.CookieJar()
+opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+
+
 def fetch(url):
-    with urllib.request.urlopen(url) as resp:
-        return resp.read().decode('utf-8', errors='replace')
+    with opener.open(url) as resp:
+        html = resp.read().decode('utf-8', errors='replace')
+    cookies = {c.name: c.value for c in cookie_jar}
+    return html, cookies
 
 
 def crawl(start_url, limit=10):
@@ -74,7 +81,7 @@ def crawl(start_url, limit=10):
             continue
         visited.add(url)
         try:
-            html = fetch(url)
+            html, cookies = fetch(url)
         except Exception:
             continue
         links, forms = parser.parse(html)
@@ -86,6 +93,7 @@ def crawl(start_url, limit=10):
         results[url] = {
             "links": links,
             "forms": abs_forms,
+            "cookies": cookies,
         }
         for link in links:
             absolute = urljoin(url, link)
