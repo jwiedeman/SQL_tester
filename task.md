@@ -214,3 +214,4 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Implement boolean-based detection module
 - Create CSV reporting functionality
 - Provide command line interface for running scans
+- Implement time-based detection module
