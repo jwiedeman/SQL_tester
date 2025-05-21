@@ -210,5 +210,6 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Environment setup and project skeleton
 - Implement basic crawler to extract links and forms
 - Implement error-based detection module
+- Implement union-based detection module
 - Create CSV reporting functionality
 - Provide command line interface for running scans
