@@ -5,6 +5,7 @@ from . import union_based
 from . import boolean_based
 from . import time_based
 from . import oob_based
+from . import graphql_based
 
 __all__ = [
     "error_based",
@@ -12,4 +13,5 @@ __all__ = [
     "boolean_based",
     "time_based",
     "oob_based",
+    "graphql_based",
 ]
