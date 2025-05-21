@@ -21,37 +21,65 @@ PAYLOADS = [
 ]
 
 
-def fetch(url: str, method: str = "get", data: dict | None = None) -> str:
+def fetch(
+    url: str,
+    method: str = "get",
+    data: dict | None = None,
+    cookies: dict | None = None,
+) -> str:
     """Fetch a URL using the given HTTP method and return the body."""
-    return send_request(url, method=method, data=data)
+    return send_request(url, method=method, data=data, cookies=cookies)
 
 
-def test_parameter(url: str, param: str, value: str, method: str = "get", data: dict | None = None):
+def test_parameter(
+    url: str,
+    param: str,
+    value: str,
+    method: str = "get",
+    data: dict | None = None,
+    cookies: dict | None = None,
+    location: str = "query",
+):
     """Attempt UNION-based SQL injection on a single parameter."""
     data = data or {}
+    cookies = cookies or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    if method.lower() == "get":
+    if location == "cookie":
+        original = cookies.get(param, "")
+        try:
+            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies)
+        except Exception as e:
+            baseline_body = str(e)
+    elif method.lower() == "get":
         original = query.get(param, [''])[0]
         try:
-            baseline_body = fetch(url)
+            baseline_body = fetch(url, cookies=cookies)
         except Exception as e:
             baseline_body = str(e)
     else:
         original = data.get(param, "")
         try:
-            baseline_body = fetch(url, method="post", data=data)
+            baseline_body = fetch(url, method="post", data=data, cookies=cookies)
         except Exception as e:
             baseline_body = str(e)
 
     results = []
     for payload in PAYLOADS:
-        if method.lower() == "get":
+        if location == "cookie":
+            new_cookies = cookies.copy()
+            new_cookies[param] = original + payload
+            new_url = url
+            try:
+                body = fetch(new_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
+            except Exception as e:
+                body = str(e)
+        elif method.lower() == "get":
             query[param] = original + payload
             new_query = urllib.parse.urlencode(query, doseq=True)
             new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                body = fetch(new_url)
+                body = fetch(new_url, cookies=cookies)
             except Exception as e:
                 body = str(e)
         else:
@@ -59,7 +87,7 @@ def test_parameter(url: str, param: str, value: str, method: str = "get", data: 
             post_data[param] = original + payload
             new_url = url
             try:
-                body = fetch(new_url, method="post", data=post_data)
+                body = fetch(new_url, method="post", data=post_data, cookies=cookies)
             except Exception as e:
                 body = str(e)
         error = any(p.search(body) for p in ERROR_PATTERNS)

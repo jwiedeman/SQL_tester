@@ -218,3 +218,4 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Implement out-of-band detection module
 - Implement response diffing engine
 - Add POST form scanning support
+- Add cookie scanning support

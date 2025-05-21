@@ -24,10 +24,17 @@ def main():
     results = crawl(start_url, limit=limit)
     reporter = CSVReporter('report.csv')
     for url, info in results.items():
+        cookies = info.get('cookies', {})
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
         for param in query.keys():
-            tests = error_based.test_parameter(url, param, query[param][0], method="get")
+            tests = error_based.test_parameter(
+                url,
+                param,
+                query[param][0],
+                method="get",
+                cookies=cookies,
+            )
             for t in tests:
                 reporter.add_result(
                     url=t['url'],
@@ -36,7 +43,13 @@ def main():
                     method='error-based',
                     vulnerable=t['vulnerable'],
                 )
-            u_tests = union_based.test_parameter(url, param, query[param][0], method="get")
+            u_tests = union_based.test_parameter(
+                url,
+                param,
+                query[param][0],
+                method="get",
+                cookies=cookies,
+            )
             for t in u_tests:
                 reporter.add_result(
                     url=t['url'],
@@ -45,7 +58,13 @@ def main():
                     method='union-based',
                     vulnerable=t['vulnerable'],
                 )
-            b_tests = boolean_based.test_parameter(url, param, query[param][0], method="get")
+            b_tests = boolean_based.test_parameter(
+                url,
+                param,
+                query[param][0],
+                method="get",
+                cookies=cookies,
+            )
             for t in b_tests:
                 reporter.add_result(
                     url=t['url'],
@@ -54,7 +73,13 @@ def main():
                     method='boolean-based',
                     vulnerable=t['vulnerable'],
                 )
-            t_tests = time_based.test_parameter(url, param, query[param][0], method="get")
+            t_tests = time_based.test_parameter(
+                url,
+                param,
+                query[param][0],
+                method="get",
+                cookies=cookies,
+            )
             for t in t_tests:
                 reporter.add_result(
                     url=t['url'],
@@ -69,6 +94,7 @@ def main():
                 query[param][0],
                 callback_domain=callback_domain,
                 method="get",
+                cookies=cookies,
             )
             for t in o_tests:
                 reporter.add_result(
@@ -84,7 +110,14 @@ def main():
             method = form.get('method', 'get').lower()
             form_data = {i['name']: '1' for i in form.get('inputs', []) if i.get('name')}
             for param in list(form_data.keys()):
-                tests = error_based.test_parameter(action_url, param, form_data[param], method=method, data=form_data)
+                tests = error_based.test_parameter(
+                    action_url,
+                    param,
+                    form_data[param],
+                    method=method,
+                    data=form_data,
+                    cookies=cookies,
+                )
                 for t in tests:
                     reporter.add_result(
                         url=t['url'],
@@ -93,7 +126,14 @@ def main():
                         method='error-based',
                         vulnerable=t['vulnerable'],
                     )
-                u_tests = union_based.test_parameter(action_url, param, form_data[param], method=method, data=form_data)
+                u_tests = union_based.test_parameter(
+                    action_url,
+                    param,
+                    form_data[param],
+                    method=method,
+                    data=form_data,
+                    cookies=cookies,
+                )
                 for t in u_tests:
                     reporter.add_result(
                         url=t['url'],
@@ -102,7 +142,14 @@ def main():
                         method='union-based',
                         vulnerable=t['vulnerable'],
                     )
-                b_tests = boolean_based.test_parameter(action_url, param, form_data[param], method=method, data=form_data)
+                b_tests = boolean_based.test_parameter(
+                    action_url,
+                    param,
+                    form_data[param],
+                    method=method,
+                    data=form_data,
+                    cookies=cookies,
+                )
                 for t in b_tests:
                     reporter.add_result(
                         url=t['url'],
@@ -111,7 +158,14 @@ def main():
                         method='boolean-based',
                         vulnerable=t['vulnerable'],
                     )
-                t_tests = time_based.test_parameter(action_url, param, form_data[param], method=method, data=form_data)
+                t_tests = time_based.test_parameter(
+                    action_url,
+                    param,
+                    form_data[param],
+                    method=method,
+                    data=form_data,
+                    cookies=cookies,
+                )
                 for t in t_tests:
                     reporter.add_result(
                         url=t['url'],
@@ -127,6 +181,7 @@ def main():
                     callback_domain=callback_domain,
                     method=method,
                     data=form_data,
+                    cookies=cookies,
                 )
                 for t in o_tests:
                     reporter.add_result(
@@ -136,6 +191,89 @@ def main():
                         method='oob-based',
                         vulnerable=t['vulnerable'],
                     )
+        for cookie_name, cookie_value in cookies.items():
+            tests = error_based.test_parameter(
+                url,
+                cookie_name,
+                cookie_value,
+                method="get",
+                cookies=cookies,
+                location="cookie",
+            )
+            for t in tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='error-based',
+                    vulnerable=t['vulnerable'],
+                )
+            u_tests = union_based.test_parameter(
+                url,
+                cookie_name,
+                cookie_value,
+                method="get",
+                cookies=cookies,
+                location="cookie",
+            )
+            for t in u_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='union-based',
+                    vulnerable=t['vulnerable'],
+                )
+            b_tests = boolean_based.test_parameter(
+                url,
+                cookie_name,
+                cookie_value,
+                method="get",
+                cookies=cookies,
+                location="cookie",
+            )
+            for t in b_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='boolean-based',
+                    vulnerable=t['vulnerable'],
+                )
+            t_tests = time_based.test_parameter(
+                url,
+                cookie_name,
+                cookie_value,
+                method="get",
+                cookies=cookies,
+                location="cookie",
+            )
+            for t in t_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='time-based',
+                    vulnerable=t['vulnerable'],
+                )
+            o_tests = oob_based.test_parameter(
+                url,
+                cookie_name,
+                cookie_value,
+                callback_domain=callback_domain,
+                method="get",
+                cookies=cookies,
+                location="cookie",
+            )
+            for t in o_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='oob-based',
+                    vulnerable=t['vulnerable'],
+                )
+
     reporter.write()
     print(f"Scan complete. Results written to report.csv")
 
