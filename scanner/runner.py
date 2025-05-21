@@ -1,4 +1,4 @@
-import sys
+import argparse
 from urllib.parse import urlparse, parse_qs
 
 from .crawler import crawl
@@ -13,17 +13,39 @@ from .detectors import (
 from .report import CSVReporter
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python -m scanner.runner <url> [limit] [callback_domain]")
-        sys.exit(1)
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Run the SQL injection scanner")
+    parser.add_argument("url", help="Starting URL to crawl")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Maximum number of pages to crawl (default: 5)",
+    )
+    parser.add_argument(
+        "--callback-domain",
+        default="example.com",
+        help="Domain for out-of-band payloads (default: example.com)",
+    )
+    parser.add_argument(
+        "--output",
+        default="report.csv",
+        help="CSV report filename (default: report.csv)",
+    )
+    return parser.parse_args()
 
-    start_url = sys.argv[1]
-    limit = int(sys.argv[2]) if len(sys.argv) > 2 else 5
-    callback_domain = sys.argv[3] if len(sys.argv) > 3 else "example.com"
+
+def main():
+    args = parse_args()
+
+    start_url = args.url
+    limit = args.limit
+    callback_domain = args.callback_domain
+    output_file = args.output
 
     results = crawl(start_url, limit=limit)
-    reporter = CSVReporter('report.csv')
+    reporter = CSVReporter(output_file)
     for url, info in results.items():
         cookies = info.get('cookies', {})
         headers = {
