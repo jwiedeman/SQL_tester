@@ -1,6 +1,6 @@
 # SQL Injection Scanner
 
-This repository contains a simple SQL injection scanner written in Python. It crawls a target website, attempts error-based SQL injection payloads, and generates a CSV report.
+This repository contains a simple SQL injection scanner written in Python. It crawls a target website, attempts error-based and UNION-based SQL injection payloads, and generates a CSV report.
 
 ## Usage
 
