@@ -25,6 +25,10 @@ def main():
     reporter = CSVReporter('report.csv')
     for url, info in results.items():
         cookies = info.get('cookies', {})
+        headers = {
+            'User-Agent': 'SQLScanner',
+            'Referer': url,
+        }
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
         for param in query.keys():
@@ -34,6 +38,7 @@ def main():
                 query[param][0],
                 method="get",
                 cookies=cookies,
+                headers=headers,
             )
             for t in tests:
                 reporter.add_result(
@@ -49,6 +54,7 @@ def main():
                 query[param][0],
                 method="get",
                 cookies=cookies,
+                headers=headers,
             )
             for t in u_tests:
                 reporter.add_result(
@@ -64,6 +70,7 @@ def main():
                 query[param][0],
                 method="get",
                 cookies=cookies,
+                headers=headers,
             )
             for t in b_tests:
                 reporter.add_result(
@@ -79,6 +86,7 @@ def main():
                 query[param][0],
                 method="get",
                 cookies=cookies,
+                headers=headers,
             )
             for t in t_tests:
                 reporter.add_result(
@@ -95,6 +103,7 @@ def main():
                 callback_domain=callback_domain,
                 method="get",
                 cookies=cookies,
+                headers=headers,
             )
             for t in o_tests:
                 reporter.add_result(
@@ -117,6 +126,7 @@ def main():
                     method=method,
                     data=form_data,
                     cookies=cookies,
+                    headers=headers,
                 )
                 for t in tests:
                     reporter.add_result(
@@ -133,6 +143,7 @@ def main():
                     method=method,
                     data=form_data,
                     cookies=cookies,
+                    headers=headers,
                 )
                 for t in u_tests:
                     reporter.add_result(
@@ -149,6 +160,7 @@ def main():
                     method=method,
                     data=form_data,
                     cookies=cookies,
+                    headers=headers,
                 )
                 for t in b_tests:
                     reporter.add_result(
@@ -165,6 +177,7 @@ def main():
                     method=method,
                     data=form_data,
                     cookies=cookies,
+                    headers=headers,
                 )
                 for t in t_tests:
                     reporter.add_result(
@@ -182,6 +195,7 @@ def main():
                     method=method,
                     data=form_data,
                     cookies=cookies,
+                    headers=headers,
                 )
                 for t in o_tests:
                     reporter.add_result(
@@ -199,6 +213,7 @@ def main():
                 method="get",
                 cookies=cookies,
                 location="cookie",
+                headers=headers,
             )
             for t in tests:
                 reporter.add_result(
@@ -215,6 +230,7 @@ def main():
                 method="get",
                 cookies=cookies,
                 location="cookie",
+                headers=headers,
             )
             for t in u_tests:
                 reporter.add_result(
@@ -231,6 +247,7 @@ def main():
                 method="get",
                 cookies=cookies,
                 location="cookie",
+                headers=headers,
             )
             for t in b_tests:
                 reporter.add_result(
@@ -247,6 +264,7 @@ def main():
                 method="get",
                 cookies=cookies,
                 location="cookie",
+                headers=headers,
             )
             for t in t_tests:
                 reporter.add_result(
@@ -264,6 +282,95 @@ def main():
                 method="get",
                 cookies=cookies,
                 location="cookie",
+                headers=headers,
+            )
+            for t in o_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='oob-based',
+                    vulnerable=t['vulnerable'],
+                )
+
+        for header_name, header_value in headers.items():
+            tests = error_based.test_parameter(
+                url,
+                header_name,
+                header_value,
+                method="get",
+                headers=headers,
+                cookies=cookies,
+                location="header",
+            )
+            for t in tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='error-based',
+                    vulnerable=t['vulnerable'],
+                )
+            u_tests = union_based.test_parameter(
+                url,
+                header_name,
+                header_value,
+                method="get",
+                headers=headers,
+                cookies=cookies,
+                location="header",
+            )
+            for t in u_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='union-based',
+                    vulnerable=t['vulnerable'],
+                )
+            b_tests = boolean_based.test_parameter(
+                url,
+                header_name,
+                header_value,
+                method="get",
+                headers=headers,
+                cookies=cookies,
+                location="header",
+            )
+            for t in b_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='boolean-based',
+                    vulnerable=t['vulnerable'],
+                )
+            t_tests = time_based.test_parameter(
+                url,
+                header_name,
+                header_value,
+                method="get",
+                headers=headers,
+                cookies=cookies,
+                location="header",
+            )
+            for t in t_tests:
+                reporter.add_result(
+                    url=t['url'],
+                    param=t['param'],
+                    payload=t['payload'],
+                    method='time-based',
+                    vulnerable=t['vulnerable'],
+                )
+            o_tests = oob_based.test_parameter(
+                url,
+                header_name,
+                header_value,
+                callback_domain=callback_domain,
+                method="get",
+                headers=headers,
+                cookies=cookies,
+                location="header",
             )
             for t in o_tests:
                 reporter.add_result(
