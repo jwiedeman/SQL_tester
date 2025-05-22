@@ -14,3 +14,13 @@ python -m scanner.runner <url> [--limit N] [--callback-domain DOMAIN] [--output 
 - `--output` sets the CSV report filename (default `report.csv`).
 
 Results will be saved to `report.csv` in the current directory.
+
+## Systematic Testing
+
+Use `tests/run_targets.py` to run the scanner against multiple targets listed in `tests/targets.txt`:
+
+```
+python tests/run_targets.py --targets tests/targets.txt --output-dir reports
+```
+
+Each target will produce a separate CSV file inside the specified output directory.

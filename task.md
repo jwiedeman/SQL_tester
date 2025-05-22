@@ -204,7 +204,6 @@ All methods non-destructive; still, advise clients about potential logging and p
 
 
 ## Tasks
-- Systematic testing on known vulnerable apps
 - Performance tuning and optimization
 - Improve payload evasion logic
 - Reduce false positives through fine-tuning detection
@@ -230,3 +229,4 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Implement GraphQL-based detection module
 - Combine modules into scanner core
 - Implement crawler integration
+- Systematic testing on known vulnerable apps
