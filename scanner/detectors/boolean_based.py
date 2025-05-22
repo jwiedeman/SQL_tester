@@ -1,5 +1,5 @@
 import urllib.parse
-from ..utils import send_request, evasion_variants
+from ..utils import send_request, evasion_variants, is_response_stable
 
 _CACHE: dict[tuple, str] = {}
 
@@ -134,6 +134,15 @@ def test_parameter(
         except Exception as e:
             baseline_body = str(e)
     baseline_len = len(baseline_body)
+    stable = is_response_stable(
+        url,
+        method=method,
+        data=data if method.lower() == "post" else None,
+        cookies=cookies,
+        headers=headers,
+        attempts=2,
+        threshold=0.2,
+    )
 
     results = []
     for p_true, p_false in zip(PAYLOADS_TRUE, PAYLOADS_FALSE):
@@ -259,9 +268,9 @@ def test_parameter(
             len_true = len(body_true)
             len_false = len(body_false)
             vulnerable = (
-                len_true != len_false and (
-                    len_true == baseline_len or len_false == baseline_len
-                )
+                len_true != len_false
+                and (len_true == baseline_len or len_false == baseline_len)
+                and stable
             )
             results.append(
                 {
