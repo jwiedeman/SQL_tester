@@ -1,6 +1,6 @@
 import re
 import urllib.parse
-from ..utils import send_request
+from ..utils import send_request, evasion_variants
 
 ERROR_PATTERNS = [
     re.compile(r"you have an error in your sql syntax", re.I),
@@ -44,65 +44,79 @@ def test_parameter(
 
     results = []
     for payload in PAYLOADS:
-        if location == "cookie":
-            new_cookies = cookies.copy()
-            new_cookies[param] = original + payload
-            new_url = url
-            try:
-                body = send_request(new_url, method=method, data=data if method.lower() == "post" else None, cookies=new_cookies)
-            except Exception as e:
-                body = str(e)
-        elif location == "header":
-            new_headers = headers.copy()
-            new_headers[param] = original + payload
-            new_url = url
-            try:
-                body = send_request(
-                    new_url,
-                    method=method,
-                    data=data if method.lower() == "post" else None,
-                    cookies=cookies,
-                    headers=new_headers,
-                )
-            except Exception as e:
-                body = str(e)
-        elif location == "path" and path_index is not None:
-            segments = parsed.path.split("/")
-            segments[path_index] = original + payload
-            new_path = "/".join(segments)
-            new_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
-            try:
-                body = send_request(
-                    new_url,
-                    method=method,
-                    data=data if method.lower() == "post" else None,
-                    cookies=cookies,
-                    headers=headers,
-                )
-            except Exception as e:
-                body = str(e)
-        elif method.lower() == "get":
-            query[param] = original + payload
-            new_query = urllib.parse.urlencode(query, doseq=True)
-            new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
-            try:
-                body = send_request(new_url, cookies=cookies, headers=headers)
-            except Exception as e:
-                body = str(e)
-        else:
-            post_data = data.copy()
-            post_data[param] = original + payload
-            new_url = url
-            try:
-                body = send_request(new_url, method="post", data=post_data, cookies=cookies, headers=headers)
-            except Exception as e:
-                body = str(e)
+        for variant in evasion_variants(payload):
+            if location == "cookie":
+                new_cookies = cookies.copy()
+                new_cookies[param] = original + variant
+                new_url = url
+                try:
+                    body = send_request(
+                        new_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=new_cookies,
+                    )
+                except Exception as e:
+                    body = str(e)
+            elif location == "header":
+                new_headers = headers.copy()
+                new_headers[param] = original + variant
+                new_url = url
+                try:
+                    body = send_request(
+                        new_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=cookies,
+                        headers=new_headers,
+                    )
+                except Exception as e:
+                    body = str(e)
+            elif location == "path" and path_index is not None:
+                segments = parsed.path.split("/")
+                segments[path_index] = original + variant
+                new_path = "/".join(segments)
+                new_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+                try:
+                    body = send_request(
+                        new_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=cookies,
+                        headers=headers,
+                    )
+                except Exception as e:
+                    body = str(e)
+            elif method.lower() == "get":
+                query[param] = original + variant
+                new_query = urllib.parse.urlencode(query, doseq=True)
+                new_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+                try:
+                    body = send_request(new_url, cookies=cookies, headers=headers)
+                except Exception as e:
+                    body = str(e)
+            else:
+                post_data = data.copy()
+                post_data[param] = original + variant
+                new_url = url
+                try:
+                    body = send_request(
+                        new_url,
+                        method="post",
+                        data=post_data,
+                        cookies=cookies,
+                        headers=headers,
+                    )
+                except Exception as e:
+                    body = str(e)
 
-        vulnerable = any(p.search(body) for p in ERROR_PATTERNS)
-        results.append({
-            "url": new_url,
-            "param": param,
-            "payload": payload,
-            "vulnerable": vulnerable,
-        })
+            vulnerable = any(p.search(body) for p in ERROR_PATTERNS)
+            results.append(
+                {
+                    "url": new_url,
+                    "param": param,
+                    "payload": variant,
+                    "vulnerable": vulnerable,
+                }
+            )
     return results

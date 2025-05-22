@@ -205,7 +205,6 @@ All methods non-destructive; still, advise clients about potential logging and p
 
 ## Tasks
 - Performance tuning and optimization
-- Improve payload evasion logic
 - Reduce false positives through fine-tuning detection
 - Write technical documentation of modules and integration
 - Publish ethical and usage guidelines
@@ -230,3 +229,4 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Combine modules into scanner core
 - Implement crawler integration
 - Systematic testing on known vulnerable apps
+- Improve payload evasion logic

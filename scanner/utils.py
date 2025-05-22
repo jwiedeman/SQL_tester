@@ -26,3 +26,27 @@ def send_request(
         req = urllib.request.Request(url, data=encoded, headers=req_headers)
         with urllib.request.urlopen(req) as resp:
             return resp.read().decode("utf-8", errors="replace")
+
+
+def evasion_variants(payload: str) -> list[str]:
+    """Return basic evasion variants for a payload."""
+    variants = [payload]
+    if " " in payload:
+        variants.append(payload.replace(" ", "/**/"))
+    mixed = []
+    upper = True
+    for c in payload:
+        if c.isalpha():
+            mixed.append(c.upper() if upper else c.lower())
+            upper = not upper
+        else:
+            mixed.append(c)
+    variants.append("".join(mixed))
+    # Remove duplicates while preserving order
+    seen = set()
+    unique = []
+    for v in variants:
+        if v not in seen:
+            seen.add(v)
+            unique.append(v)
+    return unique
