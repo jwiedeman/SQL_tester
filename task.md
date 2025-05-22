@@ -203,7 +203,18 @@ Explicit permission required for scans.
 All methods non-destructive; still, advise clients about potential logging and performance impacts.
 
 
-## Pending Tasks
+## Tasks
+- Combine modules into scanner core
+- Implement crawler integration
+- Systematic testing on known vulnerable apps
+- Performance tuning and optimization
+- Improve payload evasion logic
+- Reduce false positives through fine-tuning detection
+- Write technical documentation of modules and integration
+- Publish ethical and usage guidelines
+- Create user-facing instructions and report interpretation guidance
+
+## Completed Tasks
 - Environment setup and project skeleton
 - Implement basic crawler to extract links and forms
 - Implement error-based detection module
@@ -219,6 +230,3 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Add header scanning support
 - Add path parameter scanning support
 - Implement GraphQL-based detection module
-
-## Completed Tasks
-- None
