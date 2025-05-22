@@ -1,6 +1,6 @@
 import time
 import urllib.parse
-from ..utils import send_request, evasion_variants
+from ..utils import send_request, evasion_variants, average_response_time
 
 _CACHE: dict[tuple, tuple[str, float]] = {}
 
@@ -70,67 +70,65 @@ def test_parameter(
     if location == "cookie":
         original = cookies.get(param, "")
         try:
-            _, baseline_time = fetch(
+            baseline_time, jitter = average_response_time(
                 url,
                 method=method,
                 data=data if method.lower() == "post" else None,
                 cookies=cookies,
                 headers=headers,
-                use_cache=True,
             )
         except Exception:
-            baseline_time = 0.0
+            baseline_time, jitter = 0.0, 0.0
     elif location == "header":
         original = headers.get(param, "")
         try:
-            _, baseline_time = fetch(
+            baseline_time, jitter = average_response_time(
                 url,
                 method=method,
                 data=data if method.lower() == "post" else None,
                 cookies=cookies,
                 headers=headers,
-                use_cache=True,
             )
         except Exception:
-            baseline_time = 0.0
+            baseline_time, jitter = 0.0, 0.0
     elif location == "path" and path_index is not None:
         segments = parsed.path.split("/")
         original = segments[path_index]
         try:
-            _, baseline_time = fetch(
+            baseline_time, jitter = average_response_time(
                 url,
                 method=method,
                 data=data if method.lower() == "post" else None,
                 cookies=cookies,
                 headers=headers,
-                use_cache=True,
             )
         except Exception:
-            baseline_time = 0.0
+            baseline_time, jitter = 0.0, 0.0
     elif method.lower() == "get":
         original = query.get(param, [""])[0]
         try:
-            _, baseline_time = fetch(
+            baseline_time, jitter = average_response_time(
                 url,
+                method="get",
                 cookies=cookies,
                 headers=headers,
-                use_cache=True,
             )
         except Exception:
-            baseline_time = 0.0
+            baseline_time, jitter = 0.0, 0.0
     else:
         original = data.get(param, "")
         try:
-            _, baseline_time = fetch(
+            baseline_time, jitter = average_response_time(
                 url,
                 method="post",
                 data=data,
                 cookies=cookies,
                 headers=headers,
-                use_cache=True,
             )
         except Exception:
-            baseline_time = 0.0
+            baseline_time, jitter = 0.0, 0.0
+
+    stable = jitter < (delay_threshold / 2)
 
     results = []
     for payload in PAYLOADS:
@@ -201,7 +199,7 @@ def test_parameter(
                 except Exception:
                     elapsed = 0.0
 
-            vulnerable = (elapsed - baseline_time) > delay_threshold
+            vulnerable = (elapsed - baseline_time) > delay_threshold and stable
             results.append(
                 {
                     'url': new_url,

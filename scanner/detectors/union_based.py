@@ -1,6 +1,6 @@
 import re
 import urllib.parse
-from ..utils import send_request, evasion_variants
+from ..utils import send_request, evasion_variants, is_response_stable
 
 from .. import diff
 
@@ -141,6 +141,16 @@ def test_parameter(
         except Exception as e:
             baseline_body = str(e)
 
+    stable = is_response_stable(
+        url,
+        method=method,
+        data=data if method.lower() == "post" else None,
+        cookies=cookies,
+        headers=headers,
+        attempts=2,
+        threshold=0.2,
+    )
+
     results = []
     for payload in PAYLOADS:
         for variant in evasion_variants(payload):
@@ -212,7 +222,7 @@ def test_parameter(
 
             error = any(p.search(body) for p in ERROR_PATTERNS)
             diff_found = diff.is_significant_diff(baseline_body, body)
-            vulnerable = diff_found and not error
+            vulnerable = diff_found and not error and stable
             results.append(
                 {
                     'url': new_url,
