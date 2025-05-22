@@ -1,6 +1,21 @@
 import urllib.parse
 from ..utils import send_request, evasion_variants
 
+_CACHE: dict[tuple, str] = {}
+
+
+def _cache_key(
+    url: str,
+    method: str,
+    data: dict | None,
+    cookies: dict | None,
+    headers: dict | None,
+) -> tuple:
+    data_enc = urllib.parse.urlencode(sorted(data.items())) if data else ""
+    cookies_t = tuple(sorted((cookies or {}).items()))
+    headers_t = tuple(sorted((headers or {}).items()))
+    return (url, method, data_enc, cookies_t, headers_t)
+
 PAYLOADS_TRUE = [
     "' OR '1'='1",
     '" OR "1"="1',
@@ -20,9 +35,21 @@ def fetch(
     method: str = "get",
     data: dict | None = None,
     cookies: dict | None = None,
+    headers: dict | None = None,
+    *,
+    use_cache: bool = False,
 ) -> str:
     """Fetch a URL and return the body as text."""
-    return send_request(url, method=method, data=data, cookies=cookies)
+    key = _cache_key(url, method, data, cookies, headers)
+    if use_cache and key in _CACHE:
+        return _CACHE[key]
+
+    body = send_request(url, method=method, data=data, cookies=cookies, headers=headers)
+
+    if use_cache:
+        _CACHE[key] = body
+
+    return body
 
 
 def test_parameter(
@@ -45,32 +72,65 @@ def test_parameter(
     if location == "cookie":
         original = cookies.get(param, "")
         try:
-            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+            baseline_body = fetch(
+                url,
+                method=method,
+                data=data if method.lower() == "post" else None,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception as e:
             baseline_body = str(e)
     elif location == "header":
         original = headers.get(param, "")
         try:
-            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+            baseline_body = fetch(
+                url,
+                method=method,
+                data=data if method.lower() == "post" else None,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception as e:
             baseline_body = str(e)
     elif location == "path" and path_index is not None:
         segments = parsed.path.split("/")
         original = segments[path_index]
         try:
-            baseline_body = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+            baseline_body = fetch(
+                url,
+                method=method,
+                data=data if method.lower() == "post" else None,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception as e:
             baseline_body = str(e)
     elif method.lower() == "get":
         original = query.get(param, [''])[0]
         try:
-            baseline_body = fetch(url, cookies=cookies, headers=headers)
+            baseline_body = fetch(
+                url,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception as e:
             baseline_body = str(e)
     else:
         original = data.get(param, "")
         try:
-            baseline_body = fetch(url, method="post", data=data, cookies=cookies, headers=headers)
+            baseline_body = fetch(
+                url,
+                method="post",
+                data=data,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception as e:
             baseline_body = str(e)
     baseline_len = len(baseline_body)
