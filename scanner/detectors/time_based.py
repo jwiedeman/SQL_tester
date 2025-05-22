@@ -2,6 +2,21 @@ import time
 import urllib.parse
 from ..utils import send_request, evasion_variants
 
+_CACHE: dict[tuple, tuple[str, float]] = {}
+
+
+def _cache_key(
+    url: str,
+    method: str,
+    data: dict | None,
+    cookies: dict | None,
+    headers: dict | None,
+) -> tuple:
+    data_enc = urllib.parse.urlencode(sorted(data.items())) if data else ""
+    cookies_t = tuple(sorted((cookies or {}).items()))
+    headers_t = tuple(sorted((headers or {}).items()))
+    return (url, method, data_enc, cookies_t, headers_t)
+
 # Simple time-based SQL injection detection
 PAYLOADS = [
     "' OR SLEEP(5)-- ",
@@ -17,13 +32,22 @@ def fetch(
     data: dict | None = None,
     cookies: dict | None = None,
     headers: dict | None = None,
-):
+    *,
+    use_cache: bool = False,
+) -> tuple[str, float]:
     """Fetch a URL using the given method and measure response time."""
+    key = _cache_key(url, method, data, cookies, headers)
+    if use_cache and key in _CACHE:
+        return _CACHE[key]
+
     start = time.time()
     body = send_request(url, method=method, data=data, cookies=cookies, headers=headers)
     elapsed = time.time() - start
-    return body, elapsed
 
+    if use_cache:
+        _CACHE[key] = (body, elapsed)
+
+    return body, elapsed
 
 def test_parameter(
     url: str,
@@ -46,32 +70,65 @@ def test_parameter(
     if location == "cookie":
         original = cookies.get(param, "")
         try:
-            _, baseline_time = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+            _, baseline_time = fetch(
+                url,
+                method=method,
+                data=data if method.lower() == "post" else None,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception:
             baseline_time = 0.0
     elif location == "header":
         original = headers.get(param, "")
         try:
-            _, baseline_time = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+            _, baseline_time = fetch(
+                url,
+                method=method,
+                data=data if method.lower() == "post" else None,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception:
             baseline_time = 0.0
     elif location == "path" and path_index is not None:
         segments = parsed.path.split("/")
         original = segments[path_index]
         try:
-            _, baseline_time = fetch(url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
+            _, baseline_time = fetch(
+                url,
+                method=method,
+                data=data if method.lower() == "post" else None,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception:
             baseline_time = 0.0
     elif method.lower() == "get":
         original = query.get(param, [""])[0]
         try:
-            _, baseline_time = fetch(url, cookies=cookies, headers=headers)
+            _, baseline_time = fetch(
+                url,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception:
             baseline_time = 0.0
     else:
         original = data.get(param, "")
         try:
-            _, baseline_time = fetch(url, method="post", data=data, cookies=cookies, headers=headers)
+            _, baseline_time = fetch(
+                url,
+                method="post",
+                data=data,
+                cookies=cookies,
+                headers=headers,
+                use_cache=True,
+            )
         except Exception:
             baseline_time = 0.0
 
