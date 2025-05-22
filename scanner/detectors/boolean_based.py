@@ -1,5 +1,5 @@
 import urllib.parse
-from ..utils import send_request
+from ..utils import send_request, evasion_variants
 
 PAYLOADS_TRUE = [
     "' OR '1'='1",
@@ -77,121 +77,138 @@ def test_parameter(
 
     results = []
     for p_true, p_false in zip(PAYLOADS_TRUE, PAYLOADS_FALSE):
-        if location == "cookie":
-            new_cookies = cookies.copy()
-            new_cookies[param] = original + p_true
-            true_url = url
-            try:
-                body_true = fetch(
-                    true_url,
-                    method=method,
-                    data=data if method.lower() == "post" else None,
-                    cookies=new_cookies,
-                    headers=headers,
+        true_vars = evasion_variants(p_true)
+        false_vars = evasion_variants(p_false)
+        for v_true, v_false in zip(true_vars, false_vars):
+            if location == "cookie":
+                new_cookies = cookies.copy()
+                new_cookies[param] = original + v_true
+                true_url = url
+                try:
+                    body_true = fetch(
+                        true_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=new_cookies,
+                        headers=headers,
+                    )
+                except Exception as e:
+                    body_true = str(e)
+
+                new_cookies[param] = original + v_false
+                false_url = url
+                try:
+                    body_false = fetch(
+                        false_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=new_cookies,
+                        headers=headers,
+                    )
+                except Exception as e:
+                    body_false = str(e)
+            elif location == "header":
+                new_headers = headers.copy()
+                new_headers[param] = original + v_true
+                true_url = url
+                try:
+                    body_true = fetch(
+                        true_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=cookies,
+                        headers=new_headers,
+                    )
+                except Exception as e:
+                    body_true = str(e)
+
+                new_headers[param] = original + v_false
+                false_url = url
+                try:
+                    body_false = fetch(
+                        false_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=cookies,
+                        headers=new_headers,
+                    )
+                except Exception as e:
+                    body_false = str(e)
+            elif location == "path" and path_index is not None:
+                segments = parsed.path.split("/")
+                segments[path_index] = original + v_true
+                new_path = "/".join(segments)
+                true_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+                try:
+                    body_true = fetch(
+                        true_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=cookies,
+                        headers=headers,
+                    )
+                except Exception as e:
+                    body_true = str(e)
+
+                segments[path_index] = original + v_false
+                new_path = "/".join(segments)
+                false_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
+                try:
+                    body_false = fetch(
+                        false_url,
+                        method=method,
+                        data=data if method.lower() == "post" else None,
+                        cookies=cookies,
+                        headers=headers,
+                    )
+                except Exception as e:
+                    body_false = str(e)
+            elif method.lower() == "get":
+                query[param] = original + v_true
+                new_query = urllib.parse.urlencode(query, doseq=True)
+                true_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+                try:
+                    body_true = fetch(true_url, cookies=cookies, headers=headers)
+                except Exception as e:
+                    body_true = str(e)
+
+                query[param] = original + v_false
+                new_query = urllib.parse.urlencode(query, doseq=True)
+                false_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+                try:
+                    body_false = fetch(false_url, cookies=cookies, headers=headers)
+                except Exception as e:
+                    body_false = str(e)
+            else:
+                post_true = data.copy()
+                post_true[param] = original + v_true
+                true_url = url
+                try:
+                    body_true = fetch(true_url, method="post", data=post_true, cookies=cookies, headers=headers)
+                except Exception as e:
+                    body_true = str(e)
+
+                post_false = data.copy()
+                post_false[param] = original + v_false
+                false_url = url
+                try:
+                    body_false = fetch(false_url, method="post", data=post_false, cookies=cookies, headers=headers)
+                except Exception as e:
+                    body_false = str(e)
+
+            len_true = len(body_true)
+            len_false = len(body_false)
+            vulnerable = (
+                len_true != len_false and (
+                    len_true == baseline_len or len_false == baseline_len
                 )
-            except Exception as e:
-                body_true = str(e)
-
-            new_cookies[param] = original + p_false
-            false_url = url
-            try:
-                body_false = fetch(
-                    false_url,
-                    method=method,
-                    data=data if method.lower() == "post" else None,
-                    cookies=new_cookies,
-                    headers=headers,
-                )
-            except Exception as e:
-                body_false = str(e)
-        elif location == "header":
-            new_headers = headers.copy()
-            new_headers[param] = original + p_true
-            true_url = url
-            try:
-                body_true = fetch(
-                    true_url,
-                    method=method,
-                    data=data if method.lower() == "post" else None,
-                    cookies=cookies,
-                    headers=new_headers,
-                )
-            except Exception as e:
-                body_true = str(e)
-
-            new_headers[param] = original + p_false
-            false_url = url
-            try:
-                body_false = fetch(
-                    false_url,
-                    method=method,
-                    data=data if method.lower() == "post" else None,
-                    cookies=cookies,
-                    headers=new_headers,
-                )
-            except Exception as e:
-                body_false = str(e)
-        elif location == "path" and path_index is not None:
-            segments = parsed.path.split("/")
-            segments[path_index] = original + p_true
-            new_path = "/".join(segments)
-            true_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
-            try:
-                body_true = fetch(true_url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
-            except Exception as e:
-                body_true = str(e)
-
-            segments[path_index] = original + p_false
-            new_path = "/".join(segments)
-            false_url = urllib.parse.urlunparse(parsed._replace(path=new_path))
-            try:
-                body_false = fetch(false_url, method=method, data=data if method.lower() == "post" else None, cookies=cookies, headers=headers)
-            except Exception as e:
-                body_false = str(e)
-        elif method.lower() == "get":
-            query[param] = original + p_true
-            new_query = urllib.parse.urlencode(query, doseq=True)
-            true_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
-            try:
-                body_true = fetch(true_url, cookies=cookies, headers=headers)
-            except Exception as e:
-                body_true = str(e)
-
-            query[param] = original + p_false
-            new_query = urllib.parse.urlencode(query, doseq=True)
-            false_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
-            try:
-                body_false = fetch(false_url, cookies=cookies, headers=headers)
-            except Exception as e:
-                body_false = str(e)
-        else:
-            post_true = data.copy()
-            post_true[param] = original + p_true
-            true_url = url
-            try:
-                body_true = fetch(true_url, method="post", data=post_true, cookies=cookies, headers=headers)
-            except Exception as e:
-                body_true = str(e)
-
-            post_false = data.copy()
-            post_false[param] = original + p_false
-            false_url = url
-            try:
-                body_false = fetch(false_url, method="post", data=post_false, cookies=cookies, headers=headers)
-            except Exception as e:
-                body_false = str(e)
-
-        len_true = len(body_true)
-        len_false = len(body_false)
-        vulnerable = (
-            len_true != len_false and (
-                len_true == baseline_len or len_false == baseline_len
             )
-        )
-        results.append({
-            'url': true_url,
-            'param': param,
-            'payload': p_true,
-            'vulnerable': vulnerable,
-        })
+            results.append(
+                {
+                    'url': true_url,
+                    'param': param,
+                    'payload': v_true,
+                    'vulnerable': vulnerable,
+                }
+            )
     return results
