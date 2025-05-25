@@ -204,10 +204,7 @@ All methods non-destructive; still, advise clients about potential logging and p
 
 
 ## Tasks
-- Reduce false positives through fine-tuning detection
-- Write technical documentation of modules and integration
-- Publish ethical and usage guidelines
-- Create user-facing instructions and report interpretation guidance
+None
 
 ## Completed Tasks
 - Environment setup and project skeleton
@@ -230,3 +227,7 @@ All methods non-destructive; still, advise clients about potential logging and p
 - Systematic testing on known vulnerable apps
 - Improve payload evasion logic
 - Performance tuning and optimization
+- Reduce false positives through fine-tuning detection
+- Write technical documentation of modules and integration
+- Publish ethical and usage guidelines
+- Create user-facing instructions and report interpretation guidance

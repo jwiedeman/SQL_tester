@@ -133,7 +133,6 @@ def test_parameter(
             )
         except Exception as e:
             baseline_body = str(e)
-    baseline_len = len(baseline_body)
     stable = is_response_stable(
         url,
         method=method,
@@ -265,13 +264,10 @@ def test_parameter(
                 except Exception as e:
                     body_false = str(e)
 
-            len_true = len(body_true)
-            len_false = len(body_false)
-            vulnerable = (
-                len_true != len_false
-                and (len_true == baseline_len or len_false == baseline_len)
-                and stable
-            )
+            diff_true = diff.is_significant_diff(baseline_body, body_true)
+            diff_false = diff.is_significant_diff(baseline_body, body_false)
+            diff_tf = diff.is_significant_diff(body_true, body_false)
+            vulnerable = diff_tf and (diff_true != diff_false) and stable
             results.append(
                 {
                     'url': true_url,

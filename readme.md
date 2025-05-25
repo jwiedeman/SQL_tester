@@ -2,6 +2,12 @@
 
 This repository contains a simple SQL injection scanner written in Python. It crawls a target website and attempts error-based, UNION-based, boolean-based, time-based, out-of-band, and GraphQL injection payloads. HTML forms are scanned via GET or POST requests and cookies are fuzzed for injection vectors. A lightweight response diffing engine helps detect subtle changes. Results are consolidated into a CSV report.
 
+Additional documentation can be found in the [`docs/`](docs) directory:
+
+- [`technical.md`](docs/technical.md) – Module overview and integration notes.
+- [`usage.md`](docs/usage.md) – User guide and report interpretation.
+- [`ethical.md`](docs/ethical.md) – Ethical and legal usage guidelines.
+
 ## Usage
 
 ```
